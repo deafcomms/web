@@ -87,7 +87,7 @@ const App = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-      <img src={`${process.env.PUBLIC_URL}/headphones.png`} alt="Example" style={{ width: '200px', height: 'auto', margin: '20px' }} />
+      <img src={`${process.env.PUBLIC_URL}/logo.png`} alt="Example" style={{ width: '200px', height: 'auto', margin: '20px' }} />
       <h1>DEAFCOMMS</h1>
       <DragDrop />
       {audioFile ? (
