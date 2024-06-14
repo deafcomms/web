@@ -1,119 +1,110 @@
-import React from 'react';
-import './App.css';
+import { useEffect, useState, useRef } from "react"
+import axios from "axios"
 import { FileUploader } from "react-drag-drop-files";
-import { checkStatus, sendAudio, getFileData } from './sendAudio';
 
-const saveAsTextFile = (data: string, filename: string) => {
-  const blob = new Blob([data], { type: 'text/plain;charset=utf-8' });
-  const link = document.createElement('a');
+// Set AssemblyAI Axios Header
+const assembly = axios.create({
+  baseURL: "https://api.assemblyai.com/v2",
+  headers: {
+    authorization: "03fc8c0d61e7483c9af4143fe3baed38",
+    "content-type": "application/json",
+    "transfer-encoding": "chunked",
+  },
+})
 
-  link.href = URL.createObjectURL(blob);
-  link.download = `${filename}.txt`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-
-export default function App() {
-  interface ButtonProps {
-    color: string;
-    text: string;
-    onClick: any;
-  }
-  //flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
-  const fileTypes = ["flac", "mp4", "mp3", "mpeg", "m4a", "ogg", "wav", "webm"];
-  const [file, setFile] = React.useState<File | null>(null);
-  const [jobId, setJobID] = React.useState("");
-  const [status, setStatus] = React.useState<Map<string, string>>(new Map());
-
-  const accessToken = "02d9*";
+const App = () => {
+  const [audioFile, setAudioFile] = useState<File | null>(null)
 
   function DragDrop() {
+    const fileTypes = ["flac", "mp4", "mp3", "mpeg", "m4a", "ogg", "wav", "webm"];
 
     const handleChange = (file: File) => {
-      setFile(file);
-      const fileUri = URL.createObjectURL(file);
-      alert(`FILE CHARGED: ${fileUri}`);
+      setAudioFile(file)
     };
     return (
       <FileUploader handleChange={handleChange} name="file" types={fileTypes} />
     );
   }
 
-  const transmitData = async (file: File) => {
-    const res = await sendAudio(file, accessToken)
-    if (res != null) {
-      alert(`JOB ID BOZZO: ${res.id}`);
-      setJobID(res.id);
-      setStatus(prevMap => {
-        const newMap = new Map(prevMap);
-        newMap.set(res.id, res.status);
-        return newMap;
-      });
+  // AssemblyAI API
+
+  // State variables
+  const [uploadURL, setUploadURL] = useState("")
+  const [transcriptID, setTranscriptID] = useState("")
+  const [transcriptData, setTranscriptData] = useState<any>("")
+  const [transcript, setTranscript] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Upload the Audio File and retrieve the Upload URL
+  useEffect(() => {
+    if (audioFile) {
+      assembly.post("/upload", audioFile).then((res) => {
+        setUploadURL(res.data.upload_url)
+      }).catch((err) => {
+        console.error(err)
+      })
     }
+  }, [audioFile])
 
-    const stat = await checkStatus(jobId, accessToken)
-    alert(`CHECK DATA STATUS: ${JSON.stringify(stat)}`);
-    console.log(`CHECK DATA STATUS: ${JSON.stringify(stat)}`);
+  // Submit the Upload URL to AssemblyAI and retrieve the Transcript ID
+  const submitTranscriptionHandler = () => {
+    assembly.post("/transcript", {
+      audio_url: uploadURL,
+    }).then((res) => {
+      setTranscriptID(res.data.id)
+      checkStatusHandler()
+    }).catch((err) => {
+      console.error(err)
+    }
+    )
   }
 
-  const Button: React.FC<ButtonProps> = ({ color, text, onClick }) => {
-    return (
-      <button
-        style={{
-          backgroundColor: color,
-          color: 'white',
-          fontWeight: 'bold',
-          padding: '10px 20px',
-          borderRadius: '10px',
-          border: 'none',
-          cursor: 'pointer',
-        }}
-        onClick={onClick}
-      >
-        {text}
-      </button>
-    );
-  };
+  // Check the status of the Transcript
+  const checkStatusHandler = async () => {
+    setIsLoading(true)
+    try {
+      await assembly.get(`/transcript/${transcriptID}`).then((res) => {
+        setTranscriptData(res.data)
+      })
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
-  const ccat = async () => {
-    const request = await fetch(`https://catfact.ninja/fact`, {
-      method: "GET",
-      headers: {
-        "Content-Type" : "application/json"
+  // Periodically check the status of the Transcript
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (transcriptData.status !== "completed" && isLoading) {
+        checkStatusHandler()
+      } else {
+        setIsLoading(false)
+        setTranscript(transcriptData.text)
+        clearInterval(interval)
       }
-    });
-    const body = await request.json();
-    alert(`Stat ${request.status} : ${JSON.stringify(body)}`);
-  }
+    }, 1000)
+    return () => clearInterval(interval)
+  },)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <h1 style={{ textAlign: 'center', marginTop: '5%', fontSize: '3em' }}>
-        Software Engineering Final Project
-      </h1>
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
-        <DragDrop />
-      </div>
+    <div>
+      <h1>DEAFCOMM</h1>
+      <DragDrop />
+      {audioFile ? (
+        <div>
+          <button onClick={submitTranscriptionHandler}>SUBMIT</button>
+          <p>{audioFile.name}</p>
+        </div>
+      ) : (
+        <p>Please Submit a file</p>
+      )}
 
-      {(file == null) ? null :
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-          <h2>{file.name}</h2>
-          <div >
-            <Button color="blue" text="Download Subtitles" onClick={() => { transmitData(file) }} />
-          </div>
-        </div>}
-        <Button color="pink" text="check status" onClick={async () => {
-        const stat = await checkStatus(jobId, accessToken)
-        alert(`CHECK DATA STATUS: ${JSON.stringify(stat)}`);
-        console.log(`CHECK DATA STATUS: ${JSON.stringify(stat)}`);
-      }} />
-      <Button color="cyan" text="Retrieve File" onClick={async () => {
-        const stat = await getFileData(jobId, accessToken)
-        alert(`GET DATA STATUS: ${JSON.stringify(stat)}`);
-        console.log(`GET DATA STATUS: ${JSON.stringify(stat)}`);
-      }} />
-      <Button color='red' text='cat' onClick={() => {ccat()}}/>
+      {transcriptData.status === "completed" ? (
+        <p>{transcript}</p>
+      ) : (
+        <p>{transcriptData.status}</p>
+      )}
     </div>
-  );
+  )
 }
+
+export default App
