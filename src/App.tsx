@@ -76,6 +76,17 @@ export default function App() {
     );
   };
 
+  const ccat = async () => {
+    const request = await fetch(`https://catfact.ninja/fact`, {
+      method: "GET",
+      headers: {
+        "Content-Type" : "application/json"
+      }
+    });
+    const body = await request.json();
+    alert(`Stat ${request.status} : ${JSON.stringify(body)}`);
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <h1 style={{ textAlign: 'center', marginTop: '5%', fontSize: '3em' }}>
@@ -102,6 +113,7 @@ export default function App() {
         alert(`GET DATA STATUS: ${JSON.stringify(stat)}`);
         console.log(`GET DATA STATUS: ${JSON.stringify(stat)}`);
       }} />
+      <Button color='red' text='cat' onClick={() => {ccat()}}/>
     </div>
   );
 }
