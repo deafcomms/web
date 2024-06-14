@@ -86,20 +86,24 @@ const App = () => {
   },)
 
   return (
-    <div>
-      <h1>DEAFCOMM</h1>
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <img src={`${process.env.PUBLIC_URL}/headphones.png`} alt="Example" style={{ width: '200px', height: 'auto', margin: '20px' }} />
+      <h1>DEAFCOMMS</h1>
       <DragDrop />
       {audioFile ? (
-        <div>
-          <button onClick={submitTranscriptionHandler}>SUBMIT</button>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
           <p>{audioFile.name}</p>
+          <button style={{ alignSelf: 'center' }} onClick={submitTranscriptionHandler}>SUBMIT</button>
         </div>
       ) : (
         <p>Please Submit a file</p>
       )}
 
       {transcriptData.status === "completed" ? (
-        <p>{transcript}</p>
+        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+          <p style={{fontWeight: "bold", marginRight: '5px'}}>File Transcript:</p>
+          <p> {transcript}</p>
+        </div>
       ) : (
         <p>{transcriptData.status}</p>
       )}
